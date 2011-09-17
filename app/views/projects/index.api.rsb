@@ -11,6 +11,19 @@ api.array :projects, api_meta(:total_count => @project_count, :offset => @offset
 
       api.created_on  project.created_on
       api.updated_on  project.updated_on
+
+      api.array :memberships do
+        project.memberships.each do |membership|
+          api.membership do
+            api.user :id => membership.user.id
+            api.array :roles do
+              membership.roles.each do |role|
+                api.role :id => role.id, :name => role.name
+              end
+            end
+          end
+        end
+      end if include_in_api_response? 'memberships'
     end
   end
 end
