@@ -538,6 +538,27 @@ class Project < ActiveRecord::Base
   safe_attributes 'enabled_module_names',
     :if => lambda {|project, user| project.new_record? || user.allowed_to?(:select_project_modules, project) }
 
+  safe_attributes 'memberships', :if => lambda { |_, user| user.admin? }
+
+  def memberships= array
+    new_mems = Hash[array.map do |mapping|
+      [mapping['user']['id'], mapping['roles'].map { |role| role['id'] }]
+    end]
+
+    dead, alive = members.partition { |member| new_mems.has_key? member.user_id }
+
+    # remove dead and update survivors
+    dead.each  { |member| member.destroy }
+    alive.each { |member| member.role_ids = new_mems.delete(m.user_id); member.save }
+
+    # add new
+    new_mems.each do |user_id, role_ids|
+      member = Member.create :project_id => id, :user_id => user_id
+      member.role_ids = role_ids
+      member.save
+    end
+  end
+
   # Returns an array of projects that are in this project's hierarchy
   #
   # Example: parents, children, siblings
