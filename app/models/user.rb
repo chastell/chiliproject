@@ -452,6 +452,27 @@ class User < Principal
   safe_attributes 'group_ids',
     :if => lambda {|user, current_user| current_user.admin? && !user.new_record?}
 
+  safe_attributes 'memberships', :if => lambda { |_, user| user.admin? }
+
+  def memberships= array
+    new_mems = Hash[array.map do |mapping|
+      [mapping['project']['id'], mapping['roles'].map { |role| role['id'] }]
+    end]
+
+    dead, alive = members.partition { |member| new_mems.has_key? member.project_id }
+
+    # remove dead and update survivors
+    dead.each  { |member| member.destroy }
+    alive.each { |member| member.role_ids = new_mems.delete(m.user_id); member.save }
+
+    # add new
+    new_mems.each do |project_id, role_ids|
+      member = Member.create :project_id => project_id, :user_id => id
+      member.role_ids = role_ids
+      member.save
+    end
+  end
+
   # Utility method to help check if a user should be notified about an
   # event.
   #
