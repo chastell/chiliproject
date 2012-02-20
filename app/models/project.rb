@@ -549,7 +549,7 @@ class Project < ActiveRecord::Base
 
     # remove dead and update survivors
     dead.each  { |member| member.destroy }
-    alive.each { |member| member.role_ids = new_mems.delete(m.user_id); member.save }
+    alive.each { |member| member.role_ids = new_mems.delete(member.user_id); member.save }
 
     # add new
     new_mems.each do |user_id, role_ids|
